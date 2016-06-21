@@ -109,6 +109,7 @@ Root: is a `QuadNode`
 **QuadNode**
 Size: quadrant side length
 Value: black or white
+Parent: 1 `QuadNode`
 Children: 0 or 4 `QuadNode`
 
 ## Potential Improvements

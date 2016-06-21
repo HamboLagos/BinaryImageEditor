@@ -1,4 +1,5 @@
 #include <fstream>
+#include <vector>
 
 #include "cli_utils.inl"
 
