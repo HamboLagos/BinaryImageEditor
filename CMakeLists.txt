@@ -4,5 +4,7 @@ project(BinaryImageEditor)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_CXX_STANDARD 11)
+
 # The primary cmakelists is in src/
 add_subdirectory(src)
