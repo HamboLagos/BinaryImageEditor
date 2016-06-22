@@ -8,7 +8,7 @@ class QuadNode
 public:
     /** \brief Each node can represent a Black, White, or Mixed-color quadrant. */
     enum class ColorValue {
-        Mixed, ///< The quadrant contains both black and white pixels
+        Mixed, ///< The quadrant contains both black and white pixels, ie. not a leaf
         Black,
         White
     };
@@ -30,15 +30,30 @@ public:
         }
     };
 
-    /** \brief Creates an uninitialized node.
-     *
-     * Nodes are lazily initialized via init() */
-    QuadNode();
-
     /** \brief Creates and initializes a node */
     QuadNode(size_t side_length, ColorValue color);
 
+    /** \brief Creates an uninitialized node.
+     *
+     * Nodes are lazily initialized via init(). */
+    QuadNode();
+
     void init(size_t side_length, ColorValue color);
+
+    /** \brief Returns the color associated with this node.
+     *
+     * This has no real meaning for clients if the node is not a leaf. */
+    size_t get_side_length() const;
+
+    /** \brief Returns the color associated with this node.
+     *
+     * This has no real meaning for clients if the node is not a leaf. */
+    ColorValue get_color_value() const;
+
+    /** \brief Returns true iff this node is valid and has no children.
+     *
+     * If this node is not valid, results are undefined. */
+    bool is_leaf() const;
 
     /** \brief Adds the given nodes as children of this node.
      *
@@ -53,19 +68,9 @@ public:
      * the returned struct. */
     const Children get_children() const;
 
-    size_t get_side_length() const;
-
-    /** \brief Returns the color associated with this node.
-     *
-     * This has no meaning if the node is not a leaf, and will return ColorValue::Mixed.
-     * Clients can check if this node is a leaf directly via is_leaf()*/
-    ColorValue get_color_value() const;
-
-    bool is_leaf() const;
-
     /** \brief Returns true iff this node is valid.
      *
-     * In this context, valid means the node has been initialized, and all its children are
+     * In this context, valid means the node has been initialized, and its children, if present, are
      * valid. */
     bool is_valid() const;
 

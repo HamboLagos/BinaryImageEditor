@@ -1,17 +1,15 @@
 #include "quad_node.hpp"
 
-#include <iostream>
+QuadNode::QuadNode(size_t side_length, ColorValue color) :
+    side_length(side_length),
+    color(color),
+    was_initialized(true)
+{ }
 
 QuadNode::QuadNode() :
     side_length(0),
     color(ColorValue::Mixed),
     was_initialized(false)
-{ }
-
-QuadNode::QuadNode(size_t side_length, ColorValue color) :
-    side_length(side_length),
-    color(color),
-    was_initialized(true)
 { }
 
 void

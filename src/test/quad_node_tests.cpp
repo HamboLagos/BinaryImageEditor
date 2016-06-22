@@ -98,7 +98,28 @@ TEST_F(AddingChildren, NodeIsValidSoLongAsAllOrNoChildrenArePresentAndValid)
     EXPECT_FALSE(sut.is_valid());
 }
 
-class DeletingNodes : public TestableQuadNode
+class DeletingNodes : public AddingChildren
 {
-
+protected:
+    DeletingNodes()
+    {
+        sut.init(SIDE_LENGTH, COLOR);
+        sut.set_children(children);
+    }
 };
+
+TEST_F(DeletingNodes, WhenParentNodeDeleted_ReferenceCountToChildrenDecremented)
+{
+    // two references open to each child: one from our local copy, and one that sut owns
+    EXPECT_EQ(children.q1.use_count(), 2);
+    EXPECT_EQ(children.q2.use_count(), 2);
+    EXPECT_EQ(children.q3.use_count(), 2);
+    EXPECT_EQ(children.q4.use_count(), 2);
+
+    // Ensure the sut's reference is deleted on destruction
+    sut.~QuadNode();
+    EXPECT_EQ(children.q1.use_count(), 1);
+    EXPECT_EQ(children.q2.use_count(), 1);
+    EXPECT_EQ(children.q3.use_count(), 1);
+    EXPECT_EQ(children.q4.use_count(), 1);
+}
