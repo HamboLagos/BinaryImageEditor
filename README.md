@@ -5,6 +5,24 @@ Problem statement borrowed from Drew Neil, content creator at
 [Peer to Peer](http://peertopeer.io/videos/7-paul-battley/). See [Problem Description](problem_statement.pdf) for more
 information.
 
+## Building
+1. create a temporary dir for out-of-source build
+2. Invoke cmake
+3. Build executables and run tests
+
+executables are copied bin/, unit tests to unit_tests/bin/
+
+```
+mkdir build && cd build
+cmake ..
+make all test
+```
+
+### Running Tests
+All tests can be invoked using the `make test` target. This won't rebuild the tests if they changed, that is triggered
+through `make all`. `make test` returns a summary of the test run, to run individual tests, invoke the desired test
+executable from `${build_directory}/unit_tests/bin`.
+
 ## QuadTree Representation
 In order to apply scale and rotate operations to our image, we need an appropriate data format. A QuadTrees will fit the
 bill, but it comes with a few limitations.
