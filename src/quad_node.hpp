@@ -25,10 +25,18 @@ class QuadNode
 {
 friend class QuadTree;
 friend class TestableQuadNode;
+friend class DefaultConstructorTests;
+friend class InitConstructorTests;
 
 public:
     /** \brief Nodes of this type can represent either white or black quadrants of the source image. */
     enum class ColorValue { Black, White };
+
+    /** \brief Creates a new QuadNode ready to be inserted into a QuadTree.
+     *
+     * \param side_length The length of this quadrant's sides in pixels
+     * \param color This quadrant's color, meaningless if this is not a leaf node */
+    QuadNode(size_t side_length, ColorValue color = ColorValue::Black);
 
     /** \brief Returns the length of this quad's sides. */
     size_t get_side_length() const;
@@ -42,25 +50,19 @@ public:
     /** \brief Returns true iff this is a leaf node (has no children), otherwise false. */
     bool is_leaf() const;
 
-    /** \brief Returns true iff this node is valid (has been initialized). */
-    bool is_valid() const;
-
 protected:
-    /** \brief Creates a new uninitialized quadnode.
+    /** \brief Test Method: Creates a new uninitialized quadnode.
      *
      * Uninitialized QuadNodes should be configured via init() before inseterting into tree. */
     QuadNode();
 
-    /** \brief Creates a new QuadNode ready to be inserted into a QuadTree.
-     *
-     * \param side_length The length of this quadrant's sides in pixels
-     * \param color This quadrant's color, meaningless if this is not a leaf node */
-    QuadNode(size_t side_length, ColorValue color = ColorValue::Black);
-
-    /** \brief Initializes this node, as if it had been constructed by the non-default constructor.
+    /** \brief Test Method: Initializes this node, as if it had been constructed by the non-default constructor.
      *
      * An initialized Node is ready to be insterted into the tree. Clients can query this node's status via is_valid() */
-    void init();
+    void init(size_t side_length, ColorValue color);
+
+    /** \brief Test Method: Returns true iff this node is valid (has been initialized). */
+    bool is_valid() const;
 
     /** \brief Quadrants are split following Cartesian Coordinate conventions.
      *
@@ -77,4 +79,7 @@ protected:
 
 private:
     size_t side_length;
+    ColorValue color;
+
+    bool valid; ///< Test State: whether this node is valid (has been initialized)
 };

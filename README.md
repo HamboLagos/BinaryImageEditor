@@ -122,13 +122,17 @@ It's trivial to finish this example, but continuing won't lead to any further in
 Let's formalize what we have so far
 
 **QuadTree**
+```
 Root: is a `QuadNode`
+```
 
 **QuadNode**
+```
 Size: quadrant side length
 Value: black or white
 Parent: 1 `QuadNode`
 Children: 0 or 4 `QuadNode`
+```
 
 ## Potential Improvements
 We can find potential improvements to this library by extending it to remove
