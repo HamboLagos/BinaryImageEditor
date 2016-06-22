@@ -1,85 +1,81 @@
 #pragma once
 
 #include <cstddef>
-
-/* class QuadTree */
-/* { */
-/* public: */
-/*     /** \brief Constructs the quadtree representation of a binary image from its raw pixel data. */
-/*      * */
-/*      * Elements from the pixels array are black if set, and white if cleared. On success, the root of the tree can be */
-/*      * retrieved with root(). If there's an error during construction, root() will return nullptr. */
-/*      * */
-/*      * \param pixels Flattened array of pixel values */
-/*      * \param side_length Row and column size of image in pixels (square images only) *1/ */
-/*     QuadTree(std::vector<bool> pixels, size_t side_length); */
-
-/*     /// TODO ... scale(...) */
-/*     /// TODO ... rotate(...) */
-
-/* private: */
-/*     /// TODO ... add_node(...) */
-/* } */
+#include <memory>
 
 class QuadNode
 {
-friend class QuadTree;
-friend class TestableQuadNode;
-friend class DefaultConstructorTests;
-friend class InitConstructorTests;
-
 public:
-    /** \brief Nodes of this type can represent either white or black quadrants of the source image. */
-    enum class ColorValue { Black, White };
+    /** \brief Each node can represent a Black, White, or Mixed-color quadrant. */
+    enum class ColorValue {
+        Mixed, ///< The quadrant contains both black and white pixels
+        Black,
+        White
+    };
 
-    /** \brief Creates a new QuadNode ready to be inserted into a QuadTree.
+    /** \brief Quadrants are quad-sected using Cartesian Coordinate ordering. */
+    struct Children {
+        std::shared_ptr<const QuadNode> q1; ///< quadrant 1 child
+        std::shared_ptr<const QuadNode> q2; ///< quadrant 2 child
+        std::shared_ptr<const QuadNode> q3; ///< quadrant 3 child
+        std::shared_ptr<const QuadNode> q4; ///< quadrant 4 child
+
+        inline bool operator==(const Children& other) const
+        {
+            return
+                q1 == other.q1 &&
+                q2 == other.q2 &&
+                q3 == other.q3 &&
+                q4 == other.q4;
+        }
+    };
+
+    /** \brief Creates an uninitialized node.
      *
-     * \param side_length The length of this quadrant's sides in pixels
-     * \param color This quadrant's color, meaningless if this is not a leaf node */
-    QuadNode(size_t side_length, ColorValue color = ColorValue::Black);
+     * Nodes are lazily initialized via init() */
+    QuadNode();
 
-    /** \brief Returns the length of this quad's sides. */
+    /** \brief Creates and initializes a node */
+    QuadNode(size_t side_length, ColorValue color);
+
+    void init(size_t side_length, ColorValue color);
+
+    /** \brief Adds the given nodes as children of this node.
+     *
+     * Only sets the parent->child relationship, child->parent unimplemented by design. */
+    void set_children(const Children& children);
+
+    /** \brief Returns the children of this node.
+     *
+     * Clients can check if this is a leaf node (ie. has no children) via is_leaf().
+     *
+     * By returning a copy, we are guaranteeing the lifetime of the children while the caller holds
+     * the returned struct. */
+    const Children get_children() const;
+
     size_t get_side_length() const;
 
     /** \brief Returns the color associated with this node.
      *
-     * This has no meaning if the node is a leaf, and will return ColorValue::Black by default. Clients can check if
-     * this node is a leaf by calling is_leaf()*/
+     * This has no meaning if the node is not a leaf, and will return ColorValue::Mixed.
+     * Clients can check if this node is a leaf directly via is_leaf()*/
     ColorValue get_color_value() const;
 
-    /** \brief Returns true iff this is a leaf node (has no children), otherwise false. */
     bool is_leaf() const;
 
-protected:
-    /** \brief Test Method: Creates a new uninitialized quadnode.
+    /** \brief Returns true iff this node is valid.
      *
-     * Uninitialized QuadNodes should be configured via init() before inseterting into tree. */
-    QuadNode();
-
-    /** \brief Test Method: Initializes this node, as if it had been constructed by the non-default constructor.
-     *
-     * An initialized Node is ready to be insterted into the tree. Clients can query this node's status via is_valid() */
-    void init(size_t side_length, ColorValue color);
-
-    /** \brief Test Method: Returns true iff this node is valid (has been initialized). */
+     * In this context, valid means the node has been initialized, and all its children are
+     * valid. */
     bool is_valid() const;
-
-    /** \brief Quadrants are split following Cartesian Coordinate conventions.
-     *
-     * See the README for more details */
-    struct Children {
-        const QuadNode& q1; ///< quadrant 1 child
-        const QuadNode& q2; ///< quadrant 2 child
-        const QuadNode& q3; ///< quadrant 3 child
-        const QuadNode& q4; ///< quadrant 4 child
-    };
-
-    /** \brief Adds the given nodes as children of this node. */
-    void add_children(const Children& children);
 
 private:
     size_t side_length;
     ColorValue color;
+    bool was_initialized;
 
-    bool valid; ///< Test State: whether this node is valid (has been initialized)
+    Children children;
+
+    /** \brief Children are valid if none are present, or all are present and valid. */
+    bool are_children_valid(const Children& children) const;
 };
