@@ -45,29 +45,29 @@ protected:
     QuadNode other;
 };
 
-TEST_F(Comparison, ANodeIsAlwaysEqualToItself)
+TEST_F(Comparison, AValidNodeIsAlwaysEqualToItself)
 {
-    EXPECT_EQ(one, one);
-
     one.init(10, ColorValue::White);
     EXPECT_EQ(one, one);
 }
 
 TEST_F(Comparison, GivenTwoNodes)
 {
-    EXPECT_EQ(one, other);
+    // both invalid
+    EXPECT_NE(one, other);
 
+    // other invalid
     one.init(10, ColorValue::White);
     EXPECT_NE(one, other);
 
-    other.init(10, ColorValue::White);
-    EXPECT_EQ(one, other);
-
+    // both valid and unequal
     other.init(11, ColorValue::White);
     EXPECT_NE(one, other);
 
-    other.init(10, ColorValue::Black);
-    EXPECT_NE(one, other);
+    // both valid and equal
+    other.init(10, ColorValue::White);
+    EXPECT_EQ(one, other);
+
 }
 
 class AddingChildren : public TestableQuadNode
@@ -117,16 +117,15 @@ TEST_F(AddingChildren, NodeIsValidSoLongAsAllOrNoChildrenArePresentAndValid)
     sut.set_children(children);
     EXPECT_FALSE(sut.is_valid());
 
-    // sut invalid because one of its children is invalid
+    // invalid because one of the children is not set
     QuadNode::Children one_is_invalid({
         std::make_shared<QuadNode>(SIDE_LENGTH, COLOR),
         std::make_shared<QuadNode>(SIDE_LENGTH, COLOR),
         std::make_shared<QuadNode>(SIDE_LENGTH, COLOR),
-        std::make_shared<QuadNode>(),
+        nullptr
     });
-    EXPECT_FALSE(one_is_invalid.q4->is_valid());
 
-    sut.set_children(children);
+    sut.set_children(one_is_invalid);
     EXPECT_FALSE(sut.is_valid());
 }
 
