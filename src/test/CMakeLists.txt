@@ -18,6 +18,7 @@ add_executable(
     quad_tree_tests
     quad_tree_tests.cpp
     ${CMAKE_SOURCE_DIR}/src/quad_tree.cpp
+    ${CMAKE_SOURCE_DIR}/src/quad_node.cpp
     )
 target_link_libraries(quad_tree_tests gmock gtest gmock_main)
 add_test(NAME quad_tree COMMAND quad_tree_tests)
