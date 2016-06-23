@@ -23,10 +23,15 @@ public:
         inline bool operator==(const Children& other) const
         {
             return
-                q1 == other.q1 &&
-                q2 == other.q2 &&
-                q3 == other.q3 &&
-                q4 == other.q4;
+                *q1 == *other.q1 &&
+                *q2 == *other.q2 &&
+                *q3 == *other.q3 &&
+                *q4 == *other.q4;
+        }
+
+        inline bool operator!=(const Children& other) const
+        {
+            return !(*this == other);
         }
     };
 
@@ -70,9 +75,13 @@ public:
 
     /** \brief Returns true iff this node is valid.
      *
-     * In this context, valid means the node has been initialized, and its children, if present, are
-     * valid. */
+     * In this context, valid means the node has been initialized, and has 4 or no children.
+     * The validity of each child is not asserted, that responsibility is retained by the parent
+     * tree structure */
     bool is_valid() const;
+
+    bool operator==(const QuadNode& other) const;
+    bool operator!=(const QuadNode& other) const;
 
 private:
     size_t side_length;

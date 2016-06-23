@@ -38,6 +38,38 @@ TEST_F(Initialization, OnSpecializedConstruction_NodeIsValid)
     EXPECT_TRUE(initialized.is_valid());
 }
 
+class Comparison : public TestableQuadNode
+{
+protected:
+    QuadNode one;
+    QuadNode other;
+};
+
+TEST_F(Comparison, ANodeIsAlwaysEqualToItself)
+{
+    EXPECT_EQ(one, one);
+
+    one.init(10, ColorValue::White);
+    EXPECT_EQ(one, one);
+}
+
+TEST_F(Comparison, GivenTwoNodes)
+{
+    EXPECT_EQ(one, other);
+
+    one.init(10, ColorValue::White);
+    EXPECT_NE(one, other);
+
+    other.init(10, ColorValue::White);
+    EXPECT_EQ(one, other);
+
+    other.init(11, ColorValue::White);
+    EXPECT_NE(one, other);
+
+    other.init(10, ColorValue::Black);
+    EXPECT_NE(one, other);
+}
+
 class AddingChildren : public TestableQuadNode
 {
 protected:

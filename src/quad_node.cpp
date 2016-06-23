@@ -46,10 +46,10 @@ bool
 QuadNode::are_children_valid(const Children& children) const
 {
         return
-            children.q1.use_count() != 0 && children.q1->is_valid() &&
-            children.q2.use_count() != 0 && children.q2->is_valid() &&
-            children.q3.use_count() != 0 && children.q3->is_valid() &&
-            children.q4.use_count() != 0 && children.q4->is_valid();
+            children.q1.use_count() != 0 &&
+            children.q2.use_count() != 0 &&
+            children.q3.use_count() != 0 &&
+            children.q4.use_count() != 0;
 }
 
 bool
@@ -74,4 +74,19 @@ const QuadNode::Children
 QuadNode::get_children() const
 {
     return children;
+}
+
+bool
+QuadNode::operator==(const QuadNode& other) const
+{
+    return
+        was_initialized == other.was_initialized &&
+        side_length     == other.side_length     &&
+        color           == other.color;
+}
+
+bool
+QuadNode::operator!=(const QuadNode& other) const
+{
+    return !(*this == other);
 }
