@@ -118,6 +118,8 @@ public:
      * are the same, but are located at different locations with the parent QuadTree. That is,
      * equality comparison for nodes is agnostic to its context within the parent QuadTree.
      *
+     * Results are undefined if either node is invalid.
+     *
      * \return true iff both nodes are valid and have the same properties. */
     bool operator==(const QuadNode& other) const;
 

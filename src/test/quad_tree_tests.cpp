@@ -4,111 +4,139 @@
 #include "quad_tree.hpp"
 
 using namespace testing;
-using ColorValue = QuadNode::ColorValue;
+using C = QuadNode::ColorValue;
 
 class TestableQuadTree : public Test
 {
 protected:
     QuadTree sut;
 
-    void set_root(QuadTree& tree, std::shared_ptr<QuadNode> root) { tree.set_root(root); }
-    auto parse_rows(const std::vector<bool>& data, size_t side_length)
-        -> decltype(QuadTree::parse_rows(data, side_length))
-    {
-        return QuadTree::parse_rows(data, side_length);
-    }
+    QuadTree tree_from_root(std::shared_ptr<QuadNode> root) { return QuadTree(root); }
 };
 
-class Unitialized : public TestableQuadTree { };
+class Initialization : public TestableQuadTree { };
 
-TEST_F(Unitialized, TreeIsInvalid)
+TEST_F(Initialization, Unitialized_TreeIsInvalid)
 {
     EXPECT_FALSE(sut.is_valid());
 }
 
-class Initialization : public TestableQuadTree
+TEST_F(Initialization, GivenEmptyData_TreeIsInvalid)
 {
+    sut.init({ });
+    EXPECT_FALSE(sut.is_valid());
+}
 
-protected:
-    std::vector<bool> data;
-};
+TEST_F(Initialization, GivenNonSquareData_TreeIsInvalid)
+{
+    sut.init({C::White});
+    EXPECT_TRUE(sut.is_valid());
+
+    sut.init({C::White, C::White});
+    EXPECT_FALSE(sut.is_valid());
+
+    sut.init({
+        C::White, C::White,
+        C::Black});
+    EXPECT_FALSE(sut.is_valid());
+
+    sut.init({
+        C::White, C::White,
+        C::Black, C::Black});
+    EXPECT_TRUE(sut.is_valid());
+
+}
 
 TEST_F(Initialization, GivenSinglePixel_CreatesTreeWithDepth0)
 {
-    data = {false};
-    sut.init(data, 1);
-
+    sut.init({C::White});
     EXPECT_TRUE(sut.is_valid());
 
-    QuadTree expected;
-    EXPECT_NE(expected, sut);
+    auto expected = tree_from_root(std::make_shared<QuadNode>(1, C::White));
+    EXPECT_TRUE(expected.is_valid());
 
-    set_root(expected, std::make_shared<QuadNode>(1, ColorValue::White));
     EXPECT_EQ(expected, sut);
 }
 
-TEST_F(Initialization, Given4x4HomogenousImage_CreatesTreeWithDepth0)
+TEST_F(Initialization, Given2x2HomogenousImage_CreatesTreeWithDepth0)
 {
-    data = {
-        true, true,
-        true, true
-    };
-    sut.init(data, 2);
-
+    sut.init({
+        C::White, C::White,
+        C::White, C::White
+    });
     EXPECT_TRUE(sut.is_valid());
 
-    QuadTree expected;
-    set_root(expected, std::make_shared<QuadNode>(2, ColorValue::Black));
+    auto expected = tree_from_root(std::make_shared<QuadNode>(2, C::White));
+    EXPECT_TRUE(expected.is_valid());
+    EXPECT_EQ(expected, sut);
+}
+
+TEST_F(Initialization, Given2x2HeterogeneousImage_CreatesTreeWithDepth1)
+{
+    sut.init({
+        C::White, C::Black,
+        C::Black, C::White
+    });
+    EXPECT_TRUE(sut.is_valid());
+
+    QuadNode::Children l1 = {
+        std::make_shared<QuadNode>(1, C::Black),
+        std::make_shared<QuadNode>(1, C::White),
+        std::make_shared<QuadNode>(1, C::Black),
+        std::make_shared<QuadNode>(1, C::White)
+    };
+    auto root = std::make_shared<QuadNode>(2, C::Mixed);
+    root->set_children(l1);
+
+    auto expected = tree_from_root(root);
+    EXPECT_TRUE(expected.is_valid());
     EXPECT_EQ(expected, sut);
 }
 
 TEST_F(Initialization, Given4x4HeterogeneousImage_CreatesTreeWithDepth1)
 {
-    data = {
-        false, true ,
-        true , false
-    };
-    sut.init(data, 2);
-
+    sut.init({
+        C::White, C::White, C::Black, C::White,
+        C::White, C::White, C::White, C::Black,
+        C::Black, C::Black, C::Black, C::Black,
+        C::White, C::White, C::Black, C::Black
+    });
     EXPECT_TRUE(sut.is_valid());
 
-    QuadTree expected;
-    std::shared_ptr<QuadNode> root = std::make_shared<QuadNode>(2, ColorValue::Mixed);
-    set_root(expected, root);
-    EXPECT_NE(expected, sut);
+    auto children_q1 = std::make_shared<QuadNode>(2, C::Mixed);
+    auto children_q2 = std::make_shared<QuadNode>(2, C::White);
+    auto children_q3 = std::make_shared<QuadNode>(2, C::Mixed);
+    auto children_q4 = std::make_shared<QuadNode>(2, C::Black);
 
-    QuadNode::Children l1 = {
-        std::make_shared<QuadNode>(1, ColorValue::Black),
-        std::make_shared<QuadNode>(1, ColorValue::White),
-        std::make_shared<QuadNode>(1, ColorValue::Black),
-        std::make_shared<QuadNode>(1, ColorValue::White)
+    QuadNode::Children children = {
+        children_q1,
+        children_q2,
+        children_q3,
+        children_q4
     };
-    root->set_children(l1);
+
+    QuadNode::Children children_q1_children = {
+        std::make_shared<QuadNode>(1, C::White),
+        std::make_shared<QuadNode>(1, C::Black),
+        std::make_shared<QuadNode>(1, C::White),
+        std::make_shared<QuadNode>(1, C::Black)
+    };
+    children_q1->set_children(children_q1_children);
+
+    QuadNode::Children children_q3_children = {
+        std::make_shared<QuadNode>(1, C::Black),
+        std::make_shared<QuadNode>(1, C::Black),
+        std::make_shared<QuadNode>(1, C::White),
+        std::make_shared<QuadNode>(1, C::White)
+    };
+    children_q3->set_children(children_q3_children);
+
+    auto root = std::make_shared<QuadNode>(4, C::Mixed);
+    root->set_children(children);
+
+    auto expected = tree_from_root(root);
+    EXPECT_TRUE(expected.is_valid());
     EXPECT_EQ(expected, sut);
-}
-
-class ParseRows : public TestableQuadTree { };
-
-TEST_F(ParseRows, GivenXByYInput_ReturnsXByYOutput)
-{
-    // 1x1 input
-    std::vector<bool> data = {true};
-    auto rows = parse_rows(data, 1);
-
-    decltype(rows) expected;
-    expected.push_back(std::vector<bool>({true}));
-
-    EXPECT_EQ(expected, rows);
-
-    // 2x2 input
-    data = {true, true, false, false};
-    rows = parse_rows(data, 2);
-
-    std::vector<bool> first = {true, true};
-    std::vector<bool> second = {false, false};
-    expected = {first, second};
-
-    EXPECT_EQ(expected, rows);
 }
 
 class Comparison : public TestableQuadTree
@@ -118,30 +146,64 @@ protected:
     QuadTree other;
 };
 
-TEST_F(Comparison, ATreeIsAlwaysEqualToItself)
+TEST_F(Comparison, AValidTreeIsAlwaysEqualToItself)
 {
-    EXPECT_EQ(one, one);
+    one.init({C::White});
+    EXPECT_TRUE(one.is_valid());
 
-    one.init({true}, 1);
     EXPECT_EQ(one, one);
 }
 
-TEST_F(Comparison, GivenTwoNodes)
+TEST_F(Comparison, GivenTwo1x1Trees)
 {
-    EXPECT_EQ(one, other);
-
-    one.init({true}, 1);
+    // both invalid
     EXPECT_NE(one, other);
 
-    other.init({true}, 1);
-    EXPECT_EQ(one, other);
-
-    one.init({true, false, true, false}, 2);
+    // other invalid
+    one.init({C::White});
     EXPECT_NE(one, other);
 
-    other.init({true, false, true, false}, 2);
-    EXPECT_EQ(one, other);
-
-    other.init({false, false, true, false}, 2);
+    // both valid and unequal
+    other.init({C::Black});
     EXPECT_NE(one, other);
+
+    // both valid and equal
+    other.init({C::White});
+    EXPECT_EQ(one, other);
+}
+
+TEST_F(Comparison, GivenTwo2x2Trees)
+{
+    // both valid and unequal
+    one.init({C::Black, C::Black, C::White, C::White});
+    EXPECT_NE(one, other);
+
+    // both valid and unequal
+    other.init({C::Black, C::Black, C::Black, C::White});
+    EXPECT_NE(one, other);
+
+    // both valid and equal
+    other.init({C::Black, C::Black, C::White, C::White});
+    EXPECT_EQ(one, other);
+}
+
+TEST_F(Comparison, GivenTwo4x4Trees)
+{
+    one.init({
+        C::Black, C::Black, C::White, C::White,
+        C::Black, C::Black, C::Black, C::Black,
+        C::White, C::Black, C::White, C::White,
+        C::White, C::Black, C::White, C::White,
+    });
+    EXPECT_TRUE(one.is_valid());
+
+    other.init({
+        C::Black, C::Black, C::White, C::White,
+        C::Black, C::Black, C::Black, C::Black,
+        C::White, C::Black, C::White, C::White,
+        C::White, C::Black, C::White, C::White,
+    });
+    EXPECT_TRUE(other.is_valid());
+
+    EXPECT_EQ(one, other);
 }

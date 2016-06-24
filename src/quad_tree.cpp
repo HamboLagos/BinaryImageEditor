@@ -1,102 +1,83 @@
 #include "quad_tree.hpp"
 
 #include <iostream>
+#include <cmath>
 
 using ColorValue = QuadNode::ColorValue;
 
-QuadTree::QuadTree(std::shared_ptr<const QuadNode> root)
-{
-    this->root = root;
-}
+QuadTree::QuadTree() = default;
 
 void
-QuadTree::init(const std::vector<bool>& data, size_t side_length)
+QuadTree::init(const Data& data)
 {
-    if (data.size() != side_length * side_length) {
+    root_.reset();
+
+    auto image_area = data.size();
+    if (image_area == 0) {
         return;
     }
 
-    ColorValue firstColor = data.at(0) ? ColorValue::Black : ColorValue::White;
-    bool homogenous = true;
-    for(auto pixel : data) {
-        ColorValue color = pixel ? ColorValue::Black : ColorValue::White;
-
-        if(color != firstColor) {
-            homogenous = false;
-            break;
-        }
-    }
-
-    if(homogenous) {
-        root = std::make_shared<QuadNode>(side_length, firstColor);
+    // check that data.size() is a square number, ie. the image is square
+    auto side_length = sqrt(image_area);
+    bool is_square_image = (side_length == ceil(side_length));
+    if (!is_square_image) {
         return;
     }
 
-    QuadNode* tree_root = new QuadNode(side_length, ColorValue::Mixed);
-    root.reset(tree_root);
+    Rows rows = parse_rows(data);
+    auto tree_root = make_node(rows);
+    root_ = tree_root;
 
-    auto rows = parse_rows(data, side_length);
-    init_recursive(rows, side_length, 0, 0, *tree_root);
-}
-
-void
-QuadTree::init_recursive(const std::vector<std::vector<bool>>& rows,
-                         size_t side_length, size_t x_off, size_t y_off, QuadNode& parent)
-{
-    size_t quad_side_length = side_length / 2;
-
-    QuadNode* q1 = make_node(rows, x_off + quad_side_length, y_off                   , quad_side_length);
-    QuadNode* q2 = make_node(rows, x_off                   , y_off                   , quad_side_length);
-    QuadNode* q3 = make_node(rows, x_off                   , y_off + quad_side_length, quad_side_length);
-    QuadNode* q4 = make_node(rows, x_off + quad_side_length, y_off + quad_side_length, quad_side_length);
-
-    QuadNode::Children children = {
-        std::shared_ptr<QuadNode>(q1),
-        std::shared_ptr<QuadNode>(q2),
-        std::shared_ptr<QuadNode>(q3),
-        std::shared_ptr<QuadNode>(q4),
-    };
-    parent.set_children(children);
-
-    if (q1->get_color_value() == ColorValue::Mixed) {
-        init_recursive(rows, quad_side_length, x_off + quad_side_length, y_off, *q1);
-    }
-    if (q2->get_color_value() == ColorValue::Mixed) {
-        init_recursive(rows, quad_side_length, x_off, y_off, *q2);
-    }
-    if (q3->get_color_value() == ColorValue::Mixed) {
-        init_recursive(rows, quad_side_length, x_off, y_off + quad_side_length, *q3);
-    }
-    if (q4->get_color_value() == ColorValue::Mixed) {
-        init_recursive(rows, quad_side_length, x_off + quad_side_length, y_off + quad_side_length, *q4);
+    // if its not a homogenous image, we have more work to do
+    if (root_->get_color_value() == ColorValue::Mixed) {
+        init_recursive(rows, *tree_root);
     }
 }
 
 bool
 QuadTree::is_valid() const
 {
-    bool root_initialized = root.use_count() != 0;
+    bool root_initialized = root_.use_count() != 0;
+    bool root_valid = root_initialized && root_->is_valid();
+
+    if (!root_valid) {
+        return false;
+    }
+
+    if (root_->is_leaf()) {
+        return true;
+    }
+
+    auto children = root_->get_children();
     return
-        root_initialized &&
-        root->is_valid();
+        QuadTree(children.q1).is_valid() &&
+        QuadTree(children.q2).is_valid() &&
+        QuadTree(children.q3).is_valid() &&
+        QuadTree(children.q4).is_valid();
 }
 
 bool
 QuadTree::operator==(const QuadTree& other) const
 {
-    // if either tree is unitialized, they are only equal if both are unitialized
-    if (root.use_count() == 0 || other.root.use_count() == 0) {
-        return root.use_count() == other.root.use_count();
-    }
-
-    // check the root nodes are equal
-    if (*root != *other.root) {
+    if (!is_valid() || !other.is_valid()) {
         return false;
     }
 
-    // check the subtree for each child
-    QuadNode::Children children       = root->get_children();
-    QuadNode::Children other_children = other.root->get_children();
+    // if we get here, we know both tree roots are initialized
+    if (*root_ != *other.root_) {
+        return false;
+    }
+
+    if (root_->is_leaf() && other.root_->is_leaf()) {
+        return true;
+    }
+
+    if (root_->is_leaf() != other.root_->is_leaf()) {
+        return false;
+    }
+
+    auto children       = root_->get_children();
+    auto other_children = other.root_->get_children();
 
     return
         QuadTree(children.q1) == QuadTree(other_children.q1) &&
@@ -111,10 +92,16 @@ QuadTree::operator!=(const QuadTree& other) const
     return !(*this == other);
 }
 
-std::vector<std::vector<bool>>
-QuadTree::parse_rows(const std::vector<bool>& data, size_t side_length)
+QuadTree::QuadTree(std::shared_ptr<const QuadNode> root)
 {
-    std::vector<std::vector<bool>> rows;
+    this->root_ = root;
+}
+
+QuadTree::Rows
+QuadTree::parse_rows(const Data& data)
+{
+    auto side_length = sqrt(data.size());
+    Rows rows;
     rows.reserve(side_length);
 
     for (size_t row = 0; row < side_length; ++row) {
@@ -127,30 +114,91 @@ QuadTree::parse_rows(const std::vector<bool>& data, size_t side_length)
     return rows;
 }
 
-QuadNode*
-QuadTree::make_node(std::vector<std::vector<bool>> rows,
-                    size_t x_off, size_t y_off, size_t side_length)
+QuadTree::Quad<QuadTree::Rows>
+QuadTree::get_quadrants(const Rows& rows)
 {
-    ColorValue firstColor = rows.at(y_off).at(x_off) ? ColorValue::Black : ColorValue::White;
+    auto quad_side_length = rows.size() / 2;
+    Quad<Rows> quadrants;
 
-    bool homogenous = true;
+    quadrants.q1 = parse_quadrant(rows, quad_side_length, 0               );
+    quadrants.q2 = parse_quadrant(rows, 0               , 0               );
+    quadrants.q3 = parse_quadrant(rows, 0               , quad_side_length);
+    quadrants.q4 = parse_quadrant(rows, quad_side_length, quad_side_length);
+
+    return quadrants;
+}
+
+QuadTree::Rows
+QuadTree::parse_quadrant(const Rows& rows, size_t x_off, size_t y_off)
+{
+    auto side_length = rows.size() / 2;
+    Rows quadrant;
+    quadrant.reserve(side_length);
+
     for (size_t row = 0; row < side_length; ++row) {
         auto row_start = rows.at(y_off + row).begin() + x_off;
         auto row_end = row_start + side_length;
 
-        for (auto iter = row_start; iter != row_end; ++iter) {
-            ColorValue color = *iter ? ColorValue::Black : ColorValue::White;
+        quadrant.emplace_back(row_start, row_end);
+    }
 
-            if(color != firstColor) {
+    return quadrant;
+}
+
+QuadTree::Quad<std::shared_ptr<QuadNode>>
+QuadTree::make_nodes(const Quad<Rows>& quadrants)
+{
+    auto q1 = make_node(quadrants.q1);
+    auto q2 = make_node(quadrants.q2);
+    auto q3 = make_node(quadrants.q3);
+    auto q4 = make_node(quadrants.q4);
+
+    return {q1, q2, q3, q4};
+}
+
+void
+QuadTree::init_recursive(const Rows& rows, QuadNode& parent)
+{
+    auto quadrants = get_quadrants(rows);
+    auto nodes = make_nodes(quadrants);
+    parent.set_children({nodes.q1, nodes.q2, nodes.q3, nodes.q4});
+
+    if (nodes.q1->get_color_value() == ColorValue::Mixed) {
+        init_recursive(quadrants.q1, *nodes.q1);
+    }
+
+    if (nodes.q2->get_color_value() == ColorValue::Mixed) {
+        init_recursive(quadrants.q2, *nodes.q2);
+    }
+
+    if (nodes.q3->get_color_value() == ColorValue::Mixed) {
+        init_recursive(quadrants.q3, *nodes.q3);
+    }
+
+    if (nodes.q4->get_color_value() == ColorValue::Mixed) {
+        init_recursive(quadrants.q4, *nodes.q4);
+    }
+}
+
+std::shared_ptr<QuadNode>
+QuadTree::make_node(const Rows& rows)
+{
+    auto side_length = rows.size();
+
+    auto first_color = rows.at(0).at(0);
+    bool homogenous = true;
+    for(auto row : rows) {
+        for(auto pixel : row) {
+            if(pixel != first_color) {
                 homogenous = false;
                 break;
             }
         }
     }
 
-    if (homogenous) {
-        return new QuadNode(side_length, firstColor);
+    if(homogenous) {
+        return std::make_shared<QuadNode>(side_length, first_color);
     }
 
-    return new QuadNode(side_length, ColorValue::Mixed);
+    return std::make_shared<QuadNode>(side_length, ColorValue::Mixed);
 }
