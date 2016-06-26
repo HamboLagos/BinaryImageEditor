@@ -25,20 +25,21 @@ QuadTree::init(const Data& data)
     }
 
     Rows rows = parse_rows(data);
-    auto tree_root = make_node(rows);
-    root_ = tree_root;
+    auto root = make_node(rows);
 
     // if its not a homogenous image, we have more work to do
-    if (root_->get_color_value() == ColorValue::Mixed) {
-        init_recursive(rows, *tree_root);
+    if (root->get_color_value() == ColorValue::Mixed) {
+        init_recursive(rows, *root);
     }
+
+    root_ = std::move(root);
 }
 
 bool
 QuadTree::is_valid() const
 {
     bool root_initialized = root_.use_count() != 0;
-    bool root_valid = root_initialized && root_->is_valid();
+    bool root_valid = root_initialized && root_ && root_->is_valid();
 
     if (!root_valid) {
         return false;
@@ -92,7 +93,7 @@ QuadTree::operator!=(const QuadTree& other) const
     return !(*this == other);
 }
 
-QuadTree::QuadTree(std::shared_ptr<const QuadNode> root)
+QuadTree::QuadTree(std::shared_ptr<QuadNode> root)
 {
     this->root_ = root;
 }
@@ -145,7 +146,7 @@ QuadTree::parse_quadrant(const Rows& rows, size_t x_off, size_t y_off)
     return quadrant;
 }
 
-QuadTree::Quad<std::shared_ptr<QuadNode>>
+QuadTree::Quad<std::unique_ptr<QuadNode>>
 QuadTree::make_nodes(const Quad<Rows>& quadrants)
 {
     auto q1 = make_node(quadrants.q1);
@@ -153,7 +154,12 @@ QuadTree::make_nodes(const Quad<Rows>& quadrants)
     auto q3 = make_node(quadrants.q3);
     auto q4 = make_node(quadrants.q4);
 
-    return {q1, q2, q3, q4};
+    return {
+        std::move(q1),
+        std::move(q2),
+        std::move(q3),
+        std::move(q4)
+    };
 }
 
 void
@@ -161,7 +167,6 @@ QuadTree::init_recursive(const Rows& rows, QuadNode& parent)
 {
     auto quadrants = get_quadrants(rows);
     auto nodes = make_nodes(quadrants);
-    parent.set_children({nodes.q1, nodes.q2, nodes.q3, nodes.q4});
 
     if (nodes.q1->get_color_value() == ColorValue::Mixed) {
         init_recursive(quadrants.q1, *nodes.q1);
@@ -178,9 +183,11 @@ QuadTree::init_recursive(const Rows& rows, QuadNode& parent)
     if (nodes.q4->get_color_value() == ColorValue::Mixed) {
         init_recursive(quadrants.q4, *nodes.q4);
     }
+
+    parent.set_children(std::move(nodes));
 }
 
-std::shared_ptr<QuadNode>
+std::unique_ptr<QuadNode>
 QuadTree::make_node(const Rows& rows)
 {
     auto side_length = rows.size();
@@ -197,8 +204,8 @@ QuadTree::make_node(const Rows& rows)
     }
 
     if(homogenous) {
-        return std::make_shared<QuadNode>(side_length, first_color);
+        return std::unique_ptr<QuadNode>(new QuadNode(side_length, first_color));
     }
 
-    return std::make_shared<QuadNode>(side_length, ColorValue::Mixed);
+    return std::unique_ptr<QuadNode>(new QuadNode(side_length, ColorValue::Mixed));
 }

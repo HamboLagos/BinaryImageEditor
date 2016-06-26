@@ -13,6 +13,7 @@ class QuadTree
 {
 friend class TestableQuadTree;
 
+template<typename T> using Quad = QuadNode::Quad<T>;
 using Data = std::vector<QuadNode::ColorValue>;
 using Rows = std::vector<Data>;
 
@@ -58,16 +59,7 @@ public:
     /// TODO define interface for applying operations
 
 private:
-    std::shared_ptr<const QuadNode> root_; // This tree's root node
-
-    /** \brief Defines a quad of values. */
-    template<typename T>
-    struct Quad {
-        T q1; ///< Quadrant 1 result
-        T q2; ///< Quadrant 2 result
-        T q3; ///< Quadrant 3 result
-        T q4; ///< Quadrant 4 result
-    };
+    std::shared_ptr<QuadNode> root_; // This tree's root node
 
     /** \brief Initialize a QuadTree from an existing node.
      *
@@ -77,7 +69,7 @@ private:
      * Clients should still check the validity of the tree before using it, \sa is_valid();
      *
      * \param root The initialized root of the tree. */
-    QuadTree(std::shared_ptr<const QuadNode> root);
+    QuadTree(std::shared_ptr<QuadNode> root);
 
     /** \brief Scans the input data, and returns it formatted as a 2D matrix of rows.
      *
@@ -139,13 +131,13 @@ private:
      *
      * \param quadrants The pixel data for each node.
      * \return A Quad of Nodes which encode the input pixel data. */
-    static Quad<std::shared_ptr<QuadNode>> make_nodes(const Quad<Rows>& quadrants);
+    static Quad<std::unique_ptr<QuadNode>> make_nodes(const Quad<Rows>& quadrants);
 
     /** \brief Constructs a new node which encodes the given pixel data.
      *
      * \param rows The pixel data to encode.
      * \return A Node which encodes the given pixel data. */
-    static std::shared_ptr<QuadNode> make_node(const Rows& rows);
+    static std::unique_ptr<QuadNode> make_node(const Rows& rows);
 
     /** \brief Recursively initializes each subtree.
      *

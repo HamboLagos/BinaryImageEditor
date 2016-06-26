@@ -72,45 +72,38 @@ public:
      * \return true iff this node is valid. */
     bool is_valid() const;
 
-    /** \brief Quadrants are quad-sected using Cartesian Coordinate ordering. */
-    struct Children {
-        std::shared_ptr<const QuadNode> q1; ///< quadrant 1 child
-        std::shared_ptr<const QuadNode> q2; ///< quadrant 2 child
-        std::shared_ptr<const QuadNode> q3; ///< quadrant 3 child
-        std::shared_ptr<const QuadNode> q4; ///< quadrant 4 child
-
-        inline bool operator==(const Children& other) const
-        {
-            return
-                *q1 == *other.q1 &&
-                *q2 == *other.q2 &&
-                *q3 == *other.q3 &&
-                *q4 == *other.q4;
-        }
-
-        inline bool operator!=(const Children& other) const
-        {
-            return !(*this == other);
-        }
+    /** \brief Defines a quad of values. */
+    template<typename T>
+    struct Quad {
+        T q1; ///< Quadrant 1 value
+        T q2; ///< Quadrant 2 value
+        T q3; ///< Quadrant 3 value
+        T q4; ///< Quadrant 4 value
     };
 
     /** \brief Sets or replaces the children of this node.
      *
-     * By design, there is no child->parent relationship. This node will be invalidated if any of
-     * the children are unset, \sa is_valid().
+     * By design, there is no child->parent relationship.
      *
-     * \param children The new children for this node. */
-    void set_children(const Children& children);
+     * This call will fail if any of the children are unset (null) or invalid, \sa is_valid(). In
+     * this case, this Node's children will be null (re)initialized.
+     *
+     * By setting the children, the caller is transferring their ownership to node. Accepting
+     * unique_ptr by copy reinforces this contract (see
+     * <a href="https://herbsutter.com/2013/06/05/gotw-91-solution-smart-pointer-parameters/">
+     *      Herb Sutter's opinion on Smart Pointer Parameters.
+     * </a>)
+     *
+     * \param children The new children for this node.
+     * \return true iff the call succeeded. */
+    bool set_children(Quad<std::unique_ptr<QuadNode>> children);
 
     /** \brief Retrieve this node's children.
      *
-     * By returning a copy, we are guaranteeing the lifetime of the children while the caller holds
-     * the returned struct.
-     *
-     * This has no actionable significance if this is a leaf node, \sa is_leaf().
+     * The returned children will be null-initialized if this node has no children, \sa is_leaf().
      *
      * \return The children of this node. */
-    const Children get_children() const;
+    Quad<std::shared_ptr<QuadNode>> get_children() const;
 
     /** \brief Equality comparison.
      *
@@ -127,10 +120,11 @@ public:
     bool operator!=(const QuadNode& other) const;
 
 private:
+    bool was_initialized_; ///< True iff node was initialized
     size_t side_length_;   ///< This Node's size, in pixels
     ColorValue color_;     ///< Pixel color for this node
-    bool was_initialized_; ///< True iff node was initialized
-    Children children_;    ///< Storage for this Node's Children
+
+    Quad<std::shared_ptr<QuadNode>> children_;    ///< Storage for this Node's Children
 
     /** \brief Query validity of the children, \sa is_valid().
      *

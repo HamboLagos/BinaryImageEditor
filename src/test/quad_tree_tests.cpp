@@ -79,14 +79,14 @@ TEST_F(Initialization, Given2x2HeterogeneousImage_CreatesTreeWithDepth1)
     });
     EXPECT_TRUE(sut.is_valid());
 
-    QuadNode::Children l1 = {
-        std::make_shared<QuadNode>(1, C::Black),
-        std::make_shared<QuadNode>(1, C::White),
-        std::make_shared<QuadNode>(1, C::Black),
-        std::make_shared<QuadNode>(1, C::White)
+    QuadNode::Quad<std::unique_ptr<QuadNode>> l1 = {
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::Black)),
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::White)),
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::Black)),
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::White))
     };
     auto root = std::make_shared<QuadNode>(2, C::Mixed);
-    root->set_children(l1);
+    root->set_children(std::move(l1));
 
     auto expected = tree_from_root(root);
     EXPECT_TRUE(expected.is_valid());
@@ -103,36 +103,31 @@ TEST_F(Initialization, Given4x4HeterogeneousImage_CreatesTreeWithDepth1)
     });
     EXPECT_TRUE(sut.is_valid());
 
-    auto children_q1 = std::make_shared<QuadNode>(2, C::Mixed);
-    auto children_q2 = std::make_shared<QuadNode>(2, C::White);
-    auto children_q3 = std::make_shared<QuadNode>(2, C::Mixed);
-    auto children_q4 = std::make_shared<QuadNode>(2, C::Black);
-
-    QuadNode::Children children = {
-        children_q1,
-        children_q2,
-        children_q3,
-        children_q4
+    QuadNode::Quad<std::unique_ptr<QuadNode>> root_children = {
+        std::unique_ptr<QuadNode>(new QuadNode(2, C::Mixed)),
+        std::unique_ptr<QuadNode>(new QuadNode(2, C::White)),
+        std::unique_ptr<QuadNode>(new QuadNode(2, C::Mixed)),
+        std::unique_ptr<QuadNode>(new QuadNode(2, C::Black))
     };
 
-    QuadNode::Children children_q1_children = {
-        std::make_shared<QuadNode>(1, C::White),
-        std::make_shared<QuadNode>(1, C::Black),
-        std::make_shared<QuadNode>(1, C::White),
-        std::make_shared<QuadNode>(1, C::Black)
+    QuadNode::Quad<std::unique_ptr<QuadNode>> root_q1_children = {
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::White)),
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::Black)),
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::White)),
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::Black))
     };
-    children_q1->set_children(children_q1_children);
+    root_children.q1->set_children(std::move(root_q1_children));
 
-    QuadNode::Children children_q3_children = {
-        std::make_shared<QuadNode>(1, C::Black),
-        std::make_shared<QuadNode>(1, C::Black),
-        std::make_shared<QuadNode>(1, C::White),
-        std::make_shared<QuadNode>(1, C::White)
+    QuadNode::Quad<std::unique_ptr<QuadNode>> root_q3_children = {
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::Black)),
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::Black)),
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::White)),
+        std::unique_ptr<QuadNode>(new QuadNode(1, C::White))
     };
-    children_q3->set_children(children_q3_children);
+    root_children.q3->set_children(std::move(root_q3_children));
 
     auto root = std::make_shared<QuadNode>(4, C::Mixed);
-    root->set_children(children);
+    root->set_children(std::move(root_children));
 
     auto expected = tree_from_root(root);
     EXPECT_TRUE(expected.is_valid());

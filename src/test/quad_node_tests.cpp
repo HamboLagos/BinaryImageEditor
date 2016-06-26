@@ -76,14 +76,14 @@ protected:
     static constexpr size_t SIDE_LENGTH = 10;
     static constexpr ColorValue COLOR   = ColorValue::Black;
 
-    QuadNode::Children children;
+    QuadNode::Quad<std::unique_ptr<QuadNode>> children;
 
     AddingChildren() :
         children({
-            std::make_shared<QuadNode>(SIDE_LENGTH, COLOR),
-            std::make_shared<QuadNode>(SIDE_LENGTH, COLOR),
-            std::make_shared<QuadNode>(SIDE_LENGTH, COLOR),
-            std::make_shared<QuadNode>(SIDE_LENGTH, COLOR)
+            std::unique_ptr<QuadNode>(new QuadNode(SIDE_LENGTH, COLOR)),
+            std::unique_ptr<QuadNode>(new QuadNode(SIDE_LENGTH, COLOR)),
+            std::unique_ptr<QuadNode>(new QuadNode(SIDE_LENGTH, COLOR)),
+            std::unique_ptr<QuadNode>(new QuadNode(SIDE_LENGTH, COLOR))
         })
     {
         sut.init(SIDE_LENGTH, COLOR);
@@ -99,34 +99,33 @@ TEST_F(AddingChildren, OnConstrcution_HasNoChildren)
 
 TEST_F(AddingChildren, AfterChildrenAdded_IsNoLongerALeafNode)
 {
-    sut.set_children(children);
+    auto ret = sut.set_children(std::move(children));
 
+    EXPECT_TRUE(ret);
+    EXPECT_TRUE(sut.is_valid());
     EXPECT_FALSE(sut.is_leaf());
 }
 
-TEST_F(AddingChildren, NodeIsValidSoLongAsAllOrNoChildrenArePresentAndValid)
+TEST_F(AddingChildren, NodeIsValidEvenIfOneOfTheChildrenIsUnitialized)
 {
-    sut.set_children(children);
-    EXPECT_TRUE(sut.is_valid());
-
-    // still valid because we are not changing the sut's properties, just our local copy
-    children.q3.reset();
-    EXPECT_TRUE(sut.is_valid());
+    children.q3.reset(new QuadNode());
 
     // invalid because one of the children is no longer set
-    sut.set_children(children);
-    EXPECT_FALSE(sut.is_valid());
+    auto ret = sut.set_children(std::move(children));
 
-    // invalid because one of the children is not set
-    QuadNode::Children one_is_invalid({
-        std::make_shared<QuadNode>(SIDE_LENGTH, COLOR),
-        std::make_shared<QuadNode>(SIDE_LENGTH, COLOR),
-        std::make_shared<QuadNode>(SIDE_LENGTH, COLOR),
-        nullptr
-    });
+    EXPECT_TRUE(ret);
+    EXPECT_TRUE(sut.is_valid());
+    EXPECT_FALSE(sut.is_leaf());
+}
+TEST_F(AddingChildren, NodeIsInvalidButBecomesALeafWhenOneOfTheChildrenIsNull)
+{
+    children.q3.reset();
 
-    sut.set_children(one_is_invalid);
-    EXPECT_FALSE(sut.is_valid());
+    auto ret = sut.set_children(std::move(children));
+
+    EXPECT_FALSE(ret);
+    EXPECT_TRUE(sut.is_valid());
+    EXPECT_TRUE(sut.is_leaf());
 }
 
 class DeletingNodes : public AddingChildren
@@ -135,22 +134,6 @@ protected:
     DeletingNodes()
     {
         sut.init(SIDE_LENGTH, COLOR);
-        sut.set_children(children);
+        sut.set_children(std::move(children));
     }
 };
-
-TEST_F(DeletingNodes, WhenParentNodeDeleted_ReferenceCountToChildrenDecremented)
-{
-    // two references open to each child: one from our local copy, and one that sut owns
-    EXPECT_EQ(children.q1.use_count(), 2);
-    EXPECT_EQ(children.q2.use_count(), 2);
-    EXPECT_EQ(children.q3.use_count(), 2);
-    EXPECT_EQ(children.q4.use_count(), 2);
-
-    // Ensure the sut's reference is deleted on destruction
-    sut.~QuadNode();
-    EXPECT_EQ(children.q1.use_count(), 1);
-    EXPECT_EQ(children.q2.use_count(), 1);
-    EXPECT_EQ(children.q3.use_count(), 1);
-    EXPECT_EQ(children.q4.use_count(), 1);
-}

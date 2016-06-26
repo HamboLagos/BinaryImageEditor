@@ -52,28 +52,47 @@ QuadNode::is_valid() const
     return is_leaf() || has_valid_children();
 }
 
-void
-QuadNode::set_children(const Children& children)
+bool
+QuadNode::set_children(Quad<std::unique_ptr<QuadNode>> children)
 {
-    // assignment operator on shared pointers adds the assigned pointer as an owner,
-    // ie. this will increase the ref count, making us a shared owner, which is the correct behavior
-    this->children_ = children;
+    // use move semantics to obtain ownership of the children
+    children_.q1 = std::move(children.q1);
+    children_.q2 = std::move(children.q2);
+    children_.q3 = std::move(children.q3);
+    children_.q4 = std::move(children.q4);
+
+    // if any of the children are invalid, don't use them
+    // it wouldn't make sense to keep our old children either, so we reset all
+    if (!has_valid_children()) {
+        children_.q1.reset();
+        children_.q2.reset();
+        children_.q3.reset();
+        children_.q4.reset();
+        return false;
+    }
+
+    return true;
 }
 
-const QuadNode::Children
+QuadNode::Quad<std::shared_ptr<QuadNode>>
 QuadNode::get_children() const
 {
-    return children_;
+    return Quad<std::shared_ptr<QuadNode>>({
+        children_.q1,
+        children_.q2,
+        children_.q3,
+        children_.q4,
+    });
 }
 
 bool
 QuadNode::has_valid_children() const
 {
-        return
-            children_.q1.use_count() != 0 &&
-            children_.q2.use_count() != 0 &&
-            children_.q3.use_count() != 0 &&
-            children_.q4.use_count() != 0;
+    return
+      children_.q1 && children_.q1.use_count() != 0 &&
+      children_.q2 && children_.q2.use_count() != 0 &&
+      children_.q3 && children_.q3.use_count() != 0 &&
+      children_.q4 && children_.q4.use_count() != 0;
 }
 
 bool
@@ -84,8 +103,8 @@ QuadNode::operator==(const QuadNode& other) const
     }
 
     return
-        side_length_     == other.side_length_     &&
-        color_           == other.color_;
+        side_length_ == other.side_length_ &&
+        color_       == other.color_;
 }
 
 bool
